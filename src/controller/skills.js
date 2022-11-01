@@ -1,71 +1,139 @@
-const { v4: uuidv4 } = require("uuid");
 const commonHelper = require("../helper/common");
 const createError = require("http-errors");
-const { create, select, deleteSkill, findId } = require("../models/skills");
+const {
+  selectAll,
+  selectAllSearch,
+  selectPagination,
+  selectSkill,
+  countData,
+  insertSkill,
+  updateSkill,
+  deleteSkill,
+} = require("../models/skills");
 
 const skillController = {
-  skills: async (req, res, next) => {
+  getPaginationSkill: async (req, res) => {
     try {
-      const { nama_skill, id_worker } = req.body;
-      const id = uuidv4();
-      const data = {
-        id,
-        nama_skill,
-        id_worker,
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 1000;
+      const offset = (page - 1) * limit;
+      const search = req.query.search || "";
+      let querysearch = "";
+      let totalData = "";
+      if (search === undefined) {
+        querysearch = ``;
+        totalData = parseInt((await selectAll()).rowCount);
+      } else {
+        querysearch = `where skills.nama_skill ilike '%${search}%' `;
+        totalData = parseInt((await selectAllSearch(querysearch)).rowCount);
+      }
+      const sortby = req.query.sortby || "nama_skill";
+      const sort = req.query.sort || "desc";
+      const result = await selectPagination({
+        limit,
+        offset,
+        sortby,
+        sort,
+        querysearch,
+      });
+      // console.log(await selectPagination());
+      const totalPage = Math.ceil(totalData / limit);
+      const pagination = {
+        currentPage: page,
+        limit: limit,
+        totalData: totalData,
+        totalPage: totalPage,
       };
-      create(data)
-        .then((result) =>
-          commonHelper.response(res, result.rows, 201, "create skill succes")
-        )
-        .catch((err) => res.send(err));
+      commonHelper.response(
+        res,
+        result.rows,
+        200,
+        "success get all data",
+        pagination
+      );
     } catch (error) {
-      console.log(error);
+      res.send(createError(404));
     }
   },
-  getSkills: (req, res, next) => {
-    const id = req.params.id;
-    select(id)
-      .then((result) => {
-        commonHelper.response(res, result.rows, 200);
-      })
-      .catch((err) => res.send(err));
-  },
-  // updateSkills: async (req, res, next) => {
-  //   try {
-  //     const id = req.params.id;
-  //     const { nama_skill } = req.body;
-  //     const { rowCount } = await findId(id);
-  //     if (!rowCount) {
-  //       return next(createError(403, "ID is Not Found"));
-  //     }
-  //     const data = {
-  //       id,
-  //       nama_skill,
-  //     };
-  //     update(data)
-  //       .then((result) =>
-  //         commonHelper.response(res, result.rows, 200, "skills updated")
-  //       )
-  //       .catch((err) => res.send(err));
-  //   } catch (error) {
-  //     console.log(error);
-  //   }
-  // },
-
-  deleteSkills: async (req, res, next) => {
+  getSkill: async (req, res) => {
     try {
-      const id = Number(req.params.id);
-      const { rowCount } = await findId(id);
-      if (!rowCount) {
-        return next(createError(403, "ID is Not Found"));
+      const id = req.params.id;
+
+      const checkskill = await selectSkill(id);
+
+      try {
+        if (checkskill.rowCount == 0) throw "Skill has not found";
+      } catch (error) {
+        return commonHelper.response(res, null, 404, error);
       }
-      deleteSkill(id)
-        .then((result) =>
-          commonHelper.response(res, result.rows, 200, "Skills deleted")
-        )
-        .catch((err) => res.send(err));
-    } catch (err) {
-      console.log(err);
+
+      const result = checkskill;
+      // client.setEx(`transaction/${id}`, 60 * 60, JSON.stringify(result.rows))
+      commonHelper.response(res, result.rows, 200, null);
+    } catch (error) {
+      res.send(createError(404));
+    }
+  },
+  insertSkill: async (req, res) => {
+    try {
+      // const id = uuidv4().toLocaleLowerCase();
+
+      const {
+        rows: [count],
+      } = await countData();
+      const id = `skill-${Number(count.count) + 1}`;
+
+      const { name } = req.body;
+      // console.log(req.body.i);
+
+      await insertSkill(id, name);
+
+      commonHelper.response(res, null, 201, "New Skill Created");
+      // console.log(id, photo_id, name, description, category_id, users_id);
+    } catch (error) {
+      res.send(createError(400));
+    }
+  },
+  updateSkill: async (req, res) => {
+    try {
+      const id = req.params.id;
+      // const { product_id, quantity, discount, payment_id, status_payment, status_transaction, users_id } = req.body;
+
+      const { name } = req.body;
+      // console.log(req.body.i);
+
+      const checkSkill = await selectSkill(id);
+
+      try {
+        if (checkSkill.rowCount == 0) throw "Skill has not found";
+      } catch (error) {
+        return commonHelper.response(res, null, 404, error);
+      }
+
+      await updateSkill(id, name);
+      // console.log(await updateskill(id, recipes_id, users_id));
+      // console.log(id);
+      commonHelper.response(res, null, 201, "Skill Updated");
+    } catch (error) {
+      res.send(createError(400));
+    }
+  },
+  deleteSkill: async (req, res) => {
+    try {
+      const id = req.params.id;
+
+      const checkSkill = await selectSkill(id);
+
+      try {
+        if (checkSkill.rowCount == 0) throw "Skill has not found";
+      } catch (error) {
+        return commonHelper.response(res, null, 404, error);
+      }
+
+      deleteSkill(id);
+      commonHelper.response(res, null, 200, "Skill Deleted");
+    } catch (error) {
+      res.send(createError(404));
     }
   },
 };

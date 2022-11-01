@@ -1,4 +1,5 @@
 const multer = require("multer");
+const maxSize = 1 * 2024 * 2024;
 const path = require("path");
 
 const storage = multer.diskStorage({
@@ -6,12 +7,28 @@ const storage = multer.diskStorage({
     cb(null, "./upload");
   },
   filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    const fileExtentions = path.extname(file.originalname);
-    cb(null, file.fieldname + "-" + uniqueSuffix + fileExtentions);
+    cb(
+      null,
+      file.fieldname + "-" + Date.now() + path.extname(file.originalname)
+    );
   },
 });
 
-const upload = multer({ storage: storage });
+const upload = multer({
+  storage: storage,
+  fileFilter: (req, file, cb) => {
+    if (
+      file.mimetype == "image/png" ||
+      file.mimetype == "image/jpg" ||
+      file.mimetype == "image/jpeg"
+    ) {
+      cb(null, true);
+    } else {
+      cb(null, false);
+      return cb(new Error("Unsupported Media Type, only jpg, jpeg or png"));
+    }
+  },
+  limits: { fileSize: maxSize },
+});
 
 module.exports = upload;

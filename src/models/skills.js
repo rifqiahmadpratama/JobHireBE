@@ -1,61 +1,47 @@
 const Pool = require("../config/db");
 
-const findId = (id) => {
-  return new Promise((resolve, reject) =>
-    Pool.query(`SELECT id FROM product WHERE id=${id}`, (error, result) => {
-      if (!error) {
-        resolve(result);
-      } else {
-        reject(error);
-      }
-    })
+const selectAll = () => {
+  return Pool.query(`select * from skills`);
+};
+
+const selectAllSearch = (querysearch) => {
+  return Pool.query(`select * from skills  ${querysearch} `);
+};
+
+const selectPagination = ({ limit, offset, sortby, sort, querysearch }) => {
+  return Pool.query(
+    `select * from skills  ${querysearch}  order by ${sortby} ${sort} limit ${limit} offset ${offset} `
+  );
+};
+const selectSkill = (id) => {
+  return Pool.query(`select * from skills where id='${id}'`);
+};
+
+const insertSkill = (id, name) => {
+  return Pool.query(
+    `insert into skills ( id, name ) values ('${id}', '${name}' )`
   );
 };
 
-const create = (data) => {
-  const { id, nama_skill, id_users } = data;
-  return new Promise((resolve, reject) =>
-    Pool.query(
-      `INSERT INTO skills(id,nama_skill,id_users) VALUES('${id}','${nama_skill}','${id_users}')`,
-      (error, result) => {
-        if (!error) {
-          resolve(result);
-        } else {
-          reject(error);
-        }
-      }
-    )
-  );
+const updateSkill = (id, name) => {
+  return Pool.query(`update skills set name = '${name}' WHERE id = '${id}'`);
 };
 
-const select = (id) => {
-  return Pool.query(`SELECT * FROM skills WHERE id_users='${id}'`);
-};
 const deleteSkill = (id) => {
-  return Pool.query(`DELETE FROM skills WHERE id_users='${id}'`);
+  return Pool.query(`delete from skills where id='${id}'`);
 };
-// const update = (data) => {
-//   const { id, nama_skill } = data;
-//   return Pool.query(
-//     `UPDATE skills SET nama_skill = '${nama_skill}' WHERE id='${id}'`
-//   );
-// };
 
-// const findId = (id) => {
-//   return new Promise((resolve, reject) =>
-//     Pool.query(`SELECT id FROM skills WHERE id='${id}'`, (error, result) => {
-//       if (!error) {
-//         resolve(result);
-//       } else {
-//         reject(error);
-//       }
-//     })
-//   );
-// };
+const countData = () => {
+  return Pool.query("SELECT COUNT(*) FROM skills");
+};
 
 module.exports = {
-  findId,
-  create,
-  select,
+  selectAll,
+  selectAllSearch,
+  selectPagination,
+  selectSkill,
+  insertSkill,
+  updateSkill,
   deleteSkill,
+  countData,
 };
